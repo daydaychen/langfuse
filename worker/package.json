@@ -9,7 +9,7 @@
     "entrypoint.sh"
   ],
   "engines": {
-    "node": "24"
+    "node": "22"
   },
   "scripts": {
     "test": "vitest run",
