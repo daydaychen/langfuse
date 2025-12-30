@@ -1,5 +1,7 @@
 FROM hub-dev.hexin.cn/ths/dc-spider-langfuse-node:v22.21.1 AS centos
 
+ENV PRISMA_ENGINES_MIRROR http://repositories-public.myhexin.com:8087/repository/node-taobao-mirror/prisma
+
 FROM centos AS base
 RUN npm install turbo@^2.7.1 --global
 ENV PNPM_HOME="/pnpm"
@@ -25,7 +27,6 @@ COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 
 ENV PUPPETEER_SKIP_DOWNLOAD true
-ENV PRISMA_ENGINES_MIRROR http://repositories-public.myhexin.com:8087/repository/node-taobao-mirror/prisma
 
 RUN pnpm install --frozen-lockfile
 
@@ -115,11 +116,12 @@ RUN mkdir -p /app/.npm-global
 RUN npm config set prefix '/app/.npm-global'
 ENV PATH="/app/.npm-global/bin:$PATH"
 
+RUN chown -R nextjs:nodejs /app/.npm-global
 # Install prisma globally in the custom npm directory
 RUN npm install -g --no-package-lock --no-save prisma@6.17.1
+RUN prisma version
 
 # Set ownership of npm global directory to nextjs user
-RUN chown -R nextjs:nodejs /app/.npm-global
 
 COPY --from=builder --chown=nextjs:nodejs /app/web/next.config.mjs .
 COPY --from=builder --chown=nextjs:nodejs /app/web/package.json .
