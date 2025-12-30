@@ -1,8 +1,5 @@
 FROM hub-dev.hexin.cn/business-baseimage-frontend/node:v22.21.1 AS centos
 
-# Update packages on CentOS 8
-RUN yum update -y && yum clean all
-
 FROM centos AS base
 RUN npm install turbo@^2.7.1 --global
 ENV PNPM_HOME="/pnpm"
