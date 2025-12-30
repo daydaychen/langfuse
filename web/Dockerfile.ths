@@ -21,6 +21,9 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 
+ENV PUPPETEER_SKIP_DOWNLOAD true
+ENV PRISMA_ENGINES_MIRROR http://repositories-public.myhexin.com:8087/repository/node-taobao-mirror/prisma
+
 RUN pnpm install --frozen-lockfile
 
 ENV DOCKER_BUILD 1
