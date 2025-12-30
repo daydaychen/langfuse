@@ -62,5 +62,22 @@ if [ $status -ne 0 ]; then
     exit $status
 fi
 
+# Check REDIS_PORT - if it's a variable name (not a valid port), resolve it
+if [ -n "$REDIS_PORT" ]; then
+    # Check if REDIS_PORT is a valid port number (1-65535)
+    case "$REDIS_PORT" in
+        ''|*[!0-9]*|*[!0-9]) 
+            # Not a valid port number, treat as variable name and resolve it
+            if [ -n "$(eval echo \${$REDIS_PORT})" ]; then
+                REDIS_PORT="$(eval echo \${$REDIS_PORT})"
+                export REDIS_PORT
+            fi
+            ;;
+        *)
+            # Valid port number, keep as is
+            ;;
+    esac
+fi
+
 # Run the command passed to the docker image on start
 exec "$@"
