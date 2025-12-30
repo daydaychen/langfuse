@@ -74,6 +74,7 @@ const nextConfig = {
     browserToTerminal: true,
   },
   experimental: {
+    cpus: 1,
     serverSourceMaps: false,
     webpackMemoryOptimizations: true,
     webpackBuildWorker: true,
