@@ -75,6 +75,7 @@ const nextConfig = {
     },
   },
   experimental: {
+    cpus: 1,
     serverSourceMaps: false,
     webpackMemoryOptimizations: true,
     webpackBuildWorker: true,
