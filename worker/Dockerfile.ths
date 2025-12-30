@@ -1,4 +1,4 @@
-FROM hub-dev.hexin.cn/business-baseimage-frontend/node:v22.21.1 AS centos
+FROM hub-dev.hexin.cn/ths/dc-spider-langfuse-node:v22.21.1 AS centos
 
 FROM centos AS base
 RUN npm install turbo@^2.7.1 --global
@@ -9,6 +9,9 @@ ENV PATH="$PNPM_HOME:$PATH"
 FROM base AS pruner
 
 WORKDIR /app
+
+ENV TURBO_TELEMTRY_DISABLED 1
+ENV DO_NOT_TRACK 1
 
 COPY . .
 RUN turbo prune --scope=worker --docker
@@ -45,8 +48,6 @@ FROM base AS runner
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-
-RUN yum install -y dumb-init && yum clean all
 
 WORKDIR /app
 
