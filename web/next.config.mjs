@@ -61,6 +61,7 @@ const nextConfig = {
     "kysely",
   ],
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   basePath: env.NEXT_PUBLIC_BASE_PATH,
   turbopack: {
     resolveAlias: {
@@ -74,6 +75,9 @@ const nextConfig = {
     },
   },
   experimental: {
+    serverSourceMaps: false,
+    webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
     browserDebugInfoInTerminal: true, // Logs browser logs to terminal
     // TODO: enable with new next version! 15.6
     // see: https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopackPersistentCaching
