@@ -110,7 +110,16 @@ ARG GID=1001
 RUN groupadd -g ${GID} nodejs
 RUN useradd -r -u ${UID} -g nodejs nextjs
 
+# Set npm global directory to a location where nextjs user has write permissions
+RUN mkdir -p /app/.npm-global
+RUN npm config set prefix '/app/.npm-global'
+ENV PATH="/app/.npm-global/bin:$PATH"
+
+# Install prisma globally in the custom npm directory
 RUN npm install -g --no-package-lock --no-save prisma@6.17.1
+
+# Set ownership of npm global directory to nextjs user
+RUN chown -R nextjs:nodejs /app/.npm-global
 
 COPY --from=builder --chown=nextjs:nodejs /app/web/next.config.mjs .
 COPY --from=builder --chown=nextjs:nodejs /app/web/package.json .
