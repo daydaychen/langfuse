@@ -1,4 +1,4 @@
-FROM hub-dev.hexin.cn/business-baseimage-frontend/node:v22.21.1 AS centos
+FROM hub-dev.hexin.cn/ths/dc-spider-langfuse-node:v22.21.1 AS centos
 
 FROM centos AS base
 RUN npm install turbo@^2.7.1 --global
@@ -102,7 +102,7 @@ ENV DOCKER_BUILD 0
 # Set NEXT_MANUAL_SIG_HANDLE for runtime
 ENV NEXT_MANUAL_SIG_HANDLE true
 
-RUN yum install -y dumb-init tzdata && yum clean all
+RUN yum install -y tzdata && yum clean all
 
 # Don't run production as root
 ARG UID=1001
@@ -111,10 +111,6 @@ RUN groupadd -g ${GID} nodejs
 RUN useradd -r -u ${UID} -g nodejs nextjs
 
 RUN npm install -g --no-package-lock --no-save prisma@6.17.1
-
-RUN MIGRATE_TARGET_ARCH=$(echo ${TARGETPLATFORM:-linux/amd64} | sed 's/\//-/g') && \
-    wget -q -O- https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.$MIGRATE_TARGET_ARCH.tar.gz | tar xvz && \
-    mv migrate /usr/bin/migrate
 
 COPY --from=builder --chown=nextjs:nodejs /app/web/next.config.mjs .
 COPY --from=builder --chown=nextjs:nodejs /app/web/package.json .

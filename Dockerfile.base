@@ -1,0 +1,7 @@
+FROM hub-dev.hexin.cn/business-baseimage-frontend/node:v22.21.1 AS centos
+
+RUN wget -q -O- http://repositories.myhexin.com:8087/repository/raw-share/chentiantian/dumb-init_1.2.5_x86_64 && \
+  mv dumb-init_1.2.5_x86_64 /usr/bin/dumb-init && \
+  chmod +x /usr/bin/dumb-init && \
+  wget -q -O- http://repositories.myhexin.com:8087/repository/raw-share/chentiantian/migrate.linux-amd64.tar.gz | tar xvz && \
+  mv migrate /usr/bin/migrate
