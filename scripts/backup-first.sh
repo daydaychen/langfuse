@@ -36,11 +36,12 @@ tar -czf "$ARCHIVE_PATH" \
     --exclude='.env*' \
     --exclude='*.log' \
     --exclude='*.tar.gz' \
-    --exclude='*.patch' \
+    --exclude='langfuse-incremental-*.patch' \
     .
 
 echo -e "${YELLOW}步骤 2: 生成文件校验和...${NC}"
-sha256sum "$ARCHIVE_PATH" > "${ARCHIVE_PATH}.sha256"
+cd "$SOURCE_DIR"
+sha256sum "$ARCHIVE_NAME" > "${ARCHIVE_NAME}.sha256"
 
 ARCHIVE_SIZE=$(du -h "$ARCHIVE_PATH" | cut -f1)
 
@@ -55,5 +56,4 @@ echo -e "${YELLOW}下一步操作:${NC}"
 echo "1. 将 $ARCHIVE_NAME 和 ${ARCHIVE_NAME}.sha256 拷贝到备份环境"
 echo "2. 在备份环境运行: tar -xzf $ARCHIVE_NAME"
 echo "3. 初始化Git仓库并提交: git init && git add . && git commit -m 'Initial backup'"
-echo "4. 创建同步指针: git rev-parse HEAD > .sync_pointer"
-echo "5. 提交同步指针: git add .sync_pointer && git commit -m 'Add sync pointer'"
+echo "4. 在源端创建同步tag: git tag sync-$(date +"%Y%m%d-%H%M%S")"

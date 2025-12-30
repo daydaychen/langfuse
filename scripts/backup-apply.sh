@@ -44,10 +44,12 @@ fi
 echo -e "${YELLOW}步骤 1: 验证补丁文件完整性...${NC}"
 if [ -f "$PATCH_SHA_FILE" ]; then
     cd "$PATCH_DIR"
-    if sha256sum -c "$PATCH_SHA_FILE.sha256" > /dev/null 2>&1; then
+    # 使用 --status 模式，只返回退出码，避免路径问题
+    if sha256sum --status -c "$PATCH_SHA_FILE" 2>/dev/null; then
         echo -e "${GREEN}校验和验证通过${NC}"
     else
         echo -e "${RED}错误: 校验和验证失败，文件可能损坏${NC}"
+        echo "校验文件: $PATCH_SHA_FILE"
         exit 1
     fi
     cd - > /dev/null
@@ -60,38 +62,29 @@ if [ -f "$PATCH_STAT_FILE" ]; then
     cat "$PATCH_STAT_FILE"
 fi
 
-echo -e "${YELLOW}步骤 3: 应用补丁...${NC}"
-if git am --3way < "$PATCH_FILE"; then
+echo -e "${YELLOW}步骤 3: 应用补丁到工作区...${NC}"
+if git apply --3way < "$PATCH_FILE"; then
     echo -e "${GREEN}补丁应用成功${NC}"
 else
     echo -e "${RED}错误: 补丁应用失败${NC}"
-    echo "尝试解决冲突后运行: git am --continue"
+    echo "请检查并解决冲突"
     exit 1
 fi
 
-# 获取新的commit哈希
-NEW_HASH=$(git rev-parse HEAD)
+echo -e "${YELLOW}步骤 4: 将更改暂存（排除补丁文件）...${NC}"
+git add -- "$PATCH_DIR"
+git reset HEAD -- "$PATCH_FILE" "$PATCH_SHA_FILE" "$PATCH_STAT_FILE" "$PATCH_HASH_FILE" 2>/dev/null || true
 
-echo -e "${YELLOW}步骤 4: 验证应用结果...${NC}"
-if [ -f "$PATCH_HASH_FILE" ]; then
-    EXPECTED_HASH=$(cat "$PATCH_HASH_FILE")
-    if [ "$NEW_HASH" = "$EXPECTED_HASH" ]; then
-        echo -e "${GREEN}Commit哈希验证通过: $NEW_HASH${NC}"
-    else
-        echo -e "${YELLOW}警告: Commit哈希不匹配${NC}"
-        echo "预期: $EXPECTED_HASH"
-        echo "实际: $NEW_HASH"
-    fi
-fi
+echo -e "${YELLOW}步骤 5: 显示变更统计...${NC}"
+git diff --cached --stat
 
-# 更新备份端的同步指针
-echo "$NEW_HASH" > ".sync_pointer"
+echo -e "${YELLOW}步骤 6: 清理补丁文件...${NC}"
+rm -f "$PATCH_FILE" "$PATCH_SHA_FILE" "$PATCH_STAT_FILE" "$PATCH_HASH_FILE"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}补丁应用完成！${NC}"
-echo -e "${GREEN}新的commit哈希: $NEW_HASH${NC}"
-echo -e "${GREEN}同步指针已更新: .sync_pointer${NC}"
+echo -e "${GREEN}更改已暂存，请自行提交${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo -e "${YELLOW}重要提示:${NC}"
-echo "同步指针已自动更新，下次备份时会使用这个哈希值"
+echo -e "${YELLOW}下一步操作:${NC}"
+echo "git commit -m 'Backup: <时间>'"
