@@ -63,6 +63,7 @@ const nextConfig = {
     "@opentelemetry/instrumentation-winston",
   ],
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   basePath: env.NEXT_PUBLIC_BASE_PATH,
   turbopack: {
     resolveAlias: {
@@ -73,6 +74,9 @@ const nextConfig = {
     browserToTerminal: true,
   },
   experimental: {
+    serverSourceMaps: false,
+    webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
     turbopackFileSystemCacheForBuild: true,
   },
   typescript: {
