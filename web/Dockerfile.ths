@@ -9,6 +9,9 @@ FROM base AS pruner
 
 WORKDIR /app
 
+ENV TURBO_TELEMTRY_DISABLED 1
+ENV DO_NOT_TRACK 1
+
 COPY . .
 RUN turbo prune --scope=web --docker
 
