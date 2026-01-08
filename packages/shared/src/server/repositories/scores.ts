@@ -32,6 +32,7 @@ import {
   convertDateToClickhouseDateTime,
   PreferredClickhouseService,
 } from "../clickhouse/client";
+import { executeWithMutationMonitoring } from "../clickhouse/mutationWaiter";
 import { ScoreRecordReadType } from "./definitions";
 import { env } from "../../env";
 import { _handleGetScoreById, _handleGetScoresByIds } from "./scores-utils";
@@ -388,17 +389,20 @@ export const getTraceScoresForDatasetRuns = async (
   }));
 };
 
-// Used in multiple places, including the public API, hence the non-default exclusion of metadata via excludeMetadata flag
-export const getScoresForTraces = async <
+const getScoresForTracesInternal = async <
   ExcludeMetadata extends boolean,
   IncludeHasMetadata extends boolean,
+  DataTypes extends readonly ScoreDataTypeType[],
 >(
-  props: GetScoresForTracesProps<ExcludeMetadata, IncludeHasMetadata>,
+  props: GetScoresForTracesProps<ExcludeMetadata, IncludeHasMetadata> & {
+    dataTypes?: DataTypes;
+  },
 ) => {
   const {
     projectId,
     traceIds,
     timestamp,
+    dataTypes,
     limit,
     offset,
     clickhouseConfigs,
@@ -415,7 +419,7 @@ export const getScoresForTraces = async <
       from scores s
       WHERE s.project_id = {projectId: String}
       AND s.trace_id IN ({traceIds: Array(String)})
-      AND s.data_type IN ({dataTypes: Array(String)})
+      ${dataTypes ? `AND s.data_type IN ({dataTypes: Array(String)})` : ""}
       ${timestamp ? `AND s.timestamp >= {traceTimestamp: DateTime64(3)} - ${SCORE_TO_TRACE_OBSERVATIONS_INTERVAL}` : ""}
       ORDER BY s.event_ts DESC
       LIMIT 1 BY s.id, s.project_id
@@ -437,7 +441,7 @@ export const getScoresForTraces = async <
       traceIds,
       limit,
       offset,
-      dataTypes: AGGREGATABLE_SCORE_TYPES,
+      ...(dataTypes ? { dataTypes: dataTypes.map((d) => d.toString()) } : {}),
       ...(timestamp
         ? { traceTimestamp: convertDateToClickhouseDateTime(timestamp) }
         : {}),
@@ -475,6 +479,30 @@ export const getScoresForTraces = async <
     }
 
     return score;
+  });
+};
+
+// Used in multiple places, including the public API, hence the non-default exclusion of metadata via excludeMetadata flag
+export const getScoresForTraces = async <
+  ExcludeMetadata extends boolean,
+  IncludeHasMetadata extends boolean,
+>(
+  props: GetScoresForTracesProps<ExcludeMetadata, IncludeHasMetadata>,
+) => {
+  return getScoresForTracesInternal({
+    ...props,
+    dataTypes: AGGREGATABLE_SCORE_TYPES,
+  });
+};
+
+export const getScoresAndCorrectionsForTraces = async <
+  ExcludeMetadata extends boolean,
+  IncludeHasMetadata extends boolean,
+>(
+  props: GetScoresForTracesProps<ExcludeMetadata, IncludeHasMetadata>,
+) => {
+  return getScoresForTracesInternal({
+    ...props,
   });
 };
 
@@ -1155,13 +1183,7 @@ export const deleteScoresByTraceIds = async (
   const query = `
     DELETE FROM scores
     WHERE project_id = {projectId: String}
-    AND trace_id IN ({traceIds: Array(String)})
-    AND (project_id, timestamp, name) IN (
-      SELECT project_id, timestamp, name
-      FROM scores
-      WHERE project_id = {projectId: String}
-      AND trace_id IN ({traceIds: Array(String)})
-    );
+    AND trace_id IN ({traceIds: Array(String)});
   `;
   await commandClickhouse({
     query: query,
@@ -1186,21 +1208,30 @@ export const deleteScoresByProjectId = async (projectId: string) => {
     DELETE FROM scores
     WHERE project_id = {projectId: String};
   `;
-  await commandClickhouse({
-    query: query,
-    params: {
-      projectId,
-    },
-    clickhouseConfigs: {
-      request_timeout: env.LANGFUSE_CLICKHOUSE_DELETION_TIMEOUT_MS,
-    },
-    tags: {
-      feature: "tracing",
-      type: "score",
-      kind: "delete",
-      projectId,
-    },
-  });
+  const tags = {
+    feature: "tracing",
+    type: "score",
+    kind: "delete",
+    projectId,
+  };
+
+  if (env.LANGFUSE_ASYNC_DELETE_TRACKING_ENABLED === "true") {
+    await executeWithMutationMonitoring({
+      tableName: "scores",
+      query,
+      params: { projectId },
+      tags,
+    });
+  } else {
+    await commandClickhouse({
+      query,
+      params: { projectId },
+      clickhouseConfigs: {
+        request_timeout: env.LANGFUSE_CLICKHOUSE_DELETION_TIMEOUT_MS,
+      },
+      tags,
+    });
+  }
 };
 
 export const deleteScoresOlderThanDays = async (
