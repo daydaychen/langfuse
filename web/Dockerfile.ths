@@ -3,7 +3,7 @@ FROM hub-dev.hexin.cn/ths/dc-spider-langfuse-node:v22.21.1 AS centos
 ENV PRISMA_ENGINES_MIRROR http://repositories-public.myhexin.com:8087/repository/node-taobao-mirror/prisma
 
 FROM centos AS base
-RUN npm install turbo@^2.7.1 --global
+RUN npm install turbo@2.8.20 --global
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
